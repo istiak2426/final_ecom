@@ -1,17 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabaseClient';
 
-// fail/route.ts
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+export async function POST(request: NextRequest) {
+  try {
+    const formData = await request.formData();
+    const data = Object.fromEntries(formData);
+    const tran_id = data.tran_id as string;
 
-export async function POST(req: NextRequest) {
-  const formData = await req.formData()
-  const data = Object.fromEntries(formData)
-  const tran_id = data.tran_id as string
+    if (tran_id) {
+      await supabase
+        .from('orders')
+        .update({ payment_status: 'failed', payment_details: data })
+        .eq('order_id', tran_id);
+    }
 
-  await supabase.from('orders').update({ payment_status: 'failed' }).eq('order_id', tran_id)
-  return NextResponse.redirect(new URL('/payment/fail', process.env.NEXT_PUBLIC_BASE_URL))
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL!;
+    return NextResponse.redirect(new URL('/payment/fail', baseUrl));
+  } catch (error) {
+    console.error('Fail callback error:', error);
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL!;
+    return NextResponse.redirect(new URL('/payment/fail', baseUrl));
+  }
 }
